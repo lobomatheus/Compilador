@@ -1,5 +1,6 @@
 import System.IO
 import System.Environment
+import TokenRecognizer
 
 -- Para executar, chame:
 -- runghc Compiler.hs "[nome do arquivo do programa]"
@@ -8,4 +9,4 @@ import System.Environment
 main = do
     args <- getArgs
     inf <- readFile (head args)
-    putStr inf -- substituir aqui pela chamada da função que irá separar os tokens
+    putStr map (\x -> matchToken x) inf -- substituir aqui pela chamada da função que irá separar os tokens
