@@ -30,6 +30,7 @@ data TokenId = TNull
              | TAbreParenteses
              | TFechaParenteses
              | TAspasDuplas       --valores
+             | TVarDef
              | TAlfaNum
              | TNum
              | TAlfaNumId
@@ -40,9 +41,12 @@ data TokenId = TNull
 data Token a = Token TokenId String
              deriving (Show)
 
+
+--let prog = ["program","funcoes",";","const","TAM","=","10",";","type","vetor","=","array","[","15","]","of","integer",";","aluno","=","record","nota1",",","nota2",":","real",";","end",";","var","A",",","B",",","C",",","D",":","integer",";","E",":","vetor",";","F",":","aluno",";"]
+
 -- Aqui ele irá encontrar as regex. Irei alterar quando o Eduardo colocar a gramática no classroom
 
-matchToken :: String -> Token a
+matchToken :: [Char] -> Token a
 matchToken s
     | matchRegex s "program" = Token TProgram s
     | matchRegex s "begin" = Token TBegin s
@@ -77,6 +81,7 @@ matchToken s
     
     -- valores
     | matchRegex s "\"" = Token TAspasDuplas s
+    | matchRegex s ":" = Token TVarDef s
     | matchRegex s "[:alpha:][:alnum:]*" = Token TAlfaNumId s
     | matchRegex s "[:alnum:]*" = Token TAlfaNum s
     -- falta verificar como funcionaria a verificação de se um alfanum inciado por char é string ou id
@@ -86,6 +91,6 @@ matchToken s
     | otherwise = Token TNull ""
 
 
-matchRegex :: String -> String -> Bool
+matchRegex :: [Char] -> [Char] -> Bool
 matchRegex s p = s =~ p
 
