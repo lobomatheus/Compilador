@@ -36,11 +36,8 @@ data TokenId = TNull
              | TAlfaNumId
              deriving (Show)
 
-
-
 data Token a = Token TokenId String
              deriving (Show)
-
 
 --let prog = ["program","funcoes",";","const","TAM","=","10",";","type","vetor","=","array","[","15","]","of","integer",";","aluno","=","record","nota1",",","nota2",":","real",";","end",";","var","A",",","B",",","C",",","D",":","integer",";","E",":","vetor",";","F",":","aluno",";"]
 
@@ -89,7 +86,6 @@ matchToken s
     | matchRegex s "^[0-9]+.[0-9]+$" = Token TNum s
 
     | otherwise = Token TNull ""
-
 
 matchRegex :: [Char] -> [Char] -> Bool
 matchRegex s p = s =~ p
