@@ -29,11 +29,10 @@ data TokenId = TNull
              | TFechaColchetes
              | TAbreParenteses
              | TFechaParenteses
-             | TAspasDuplas       --valores
+             | TString        --valores
              | TVarDef
              | TAlfaNum
              | TNum
-             | TAlfaNumId
              deriving (Show)
 
 data Token a = Token TokenId String
@@ -77,15 +76,14 @@ matchToken s
     | matchRegex s ")" = Token TFechaParenteses s
     
     -- valores
-    | matchRegex s "\"" = Token TAspasDuplas s
+    | matchRegex s "\"[a-zA-Z0-9]*\"" = Token TString s
     | matchRegex s ":" = Token TVarDef s
-    | matchRegex s "[:alpha:][:alnum:]*" = Token TAlfaNumId s
-    | matchRegex s "[:alnum:]*" = Token TAlfaNum s
+    | matchRegex s "[:alpha:][:alnum:]*" = Token TAlfaNum s
     -- falta verificar como funcionaria a verificação de se um alfanum inciado por char é string ou id
     | matchRegex s "^[0-9]+$" = Token TNum s
     | matchRegex s "^[0-9]+.[0-9]+$" = Token TNum s
 
-    | otherwise = Token TNull ""
+    | otherwise = error "Erro lexico: no pattern found"
 
 matchRegex :: [Char] -> [Char] -> Bool
 matchRegex s p = s =~ p
