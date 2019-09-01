@@ -1,5 +1,6 @@
 module Tokens(
     TokenId(..),
+    TokenNT(..),
     Token(..)
 ) where
 
