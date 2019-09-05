@@ -75,4 +75,5 @@ data TokenNT = TPrograma
 
 data Token = Token TokenId String
            | TknNT TokenNT
+           | TNil
              deriving (Show)
