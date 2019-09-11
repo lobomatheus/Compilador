@@ -81,7 +81,7 @@ def matchToken(val):
         return Token(27, "TFechaParenteses", val, True)
     elif(re.match("^[.]$", val)):
         return Token(28, "TPonto", val, True)
-    elif(re.match("^[\"][a-zA-Z0-9\s]*[\"]$", val)):
+    elif(re.match("^[\“][a-zA-Z0-9\s]*[\”]$", val)):
         return Token(29, "TString", val, True)
     elif(re.match("^[:]$", val)):
         return Token(30, "TDoisPontos", val, True)
@@ -91,6 +91,8 @@ def matchToken(val):
         return Token(32, "TNum", val, True)
     elif(re.match("^[0-9]+.[0-9]+$", val)):
         return Token(32, "TNum", val, True)
+    elif(re.match("^:=$", val)):
+        return Token(33, "TAtribuicao", val, True)
     #else: error
     else:
         if(val != "$"):

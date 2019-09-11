@@ -11,7 +11,7 @@ class Handler():
     # A main recebe o nome do arquivo do programa e instancia o arquivo 
     def __init__(self, filename):
         self.pos = 0
-        self.arq = arq = open(filename, "r")
+        self.arq = arq = open(filename, "r", encoding="utf8")
 
     # nextToken retorna o próximo token ou $ caso seja um valor inválido (pode ser substituido)
     # por qualquer caracter inválido para a linguagem
@@ -25,8 +25,10 @@ class Handler():
             tkn = chr + self.matchLetraNumero()
         elif chr in "1234567890":
             tkn = chr + self.matchNumero(False)
-        elif chr == '"':
+        elif chr == '“':
             tkn = chr + self.matchString()
+        elif chr == ':':
+            tkn = chr + self.matchAtribuicao()
         elif chr in "()[]=+-*/;,><!.:":
             tkn = chr
         elif chr in " \n":
@@ -44,7 +46,7 @@ class Handler():
 
         self.pos = self.pos+1
         
-        if chr == '"' :
+        if chr == '”' :
             return chr + ""
         else:
             return chr + self.matchString()
@@ -70,8 +72,16 @@ class Handler():
         if chr in "1234567890":
             return chr + self.matchNumero(isFloat)
         elif(chr == '.' and not isFloat):
-            return chr + self.matchLetraNumero(True)
+            return chr + self.matchNumero(True)
         else:
             self.pos = self.pos-1
             self.arq.seek(self.pos)
+            return ""
+    
+    def matchAtribuicao(self):
+        chr = self.arq.read(1)
+        if (chr == '='):
+            self.pos = self.pos+1
+            return chr
+        else:
             return ""

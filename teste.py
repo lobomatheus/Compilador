@@ -1,7 +1,7 @@
 import sys
 from token import Token, matchToken
 from seeker import Handler
-from sintatico import PROGRAMA
+#from sintatico import PROGRAMA
 
 #Essa seria a main do programa. Nela, um handler é instanciado
 #e vai solicitando os tokens. Ao invés desse while, teria que ser
