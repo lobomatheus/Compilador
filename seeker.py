@@ -25,7 +25,7 @@ class Handler():
             tkn = chr + self.matchLetraNumero()
         elif chr in "1234567890":
             tkn = chr + self.matchNumero(False)
-        elif chr == '“':
+        elif chr == '"':
             tkn = chr + self.matchString()
         elif chr == ':':
             tkn = chr + self.matchAtribuicao()
@@ -46,7 +46,7 @@ class Handler():
 
         self.pos = self.pos+1
         
-        if chr == '”' :
+        if chr == '"' :
             return chr + ""
         else:
             return chr + self.matchString()
