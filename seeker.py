@@ -11,7 +11,11 @@ class Handler():
     # A main recebe o nome do arquivo do programa e instancia o arquivo 
     def __init__(self, filename):
         self.pos = 0
+        self.linha=1
         self.arq = arq = open(filename, "r", encoding="utf8")
+
+    def getLinha(self):
+        return self.linha
 
     # nextToken retorna o próximo token ou $ caso seja um valor inválido (pode ser substituido)
     # por qualquer caracter inválido para a linguagem
@@ -29,11 +33,16 @@ class Handler():
             tkn = chr + self.matchString()
         elif chr == ':':
             tkn = chr + self.matchAtribuicao()
-        elif chr in "()[]=+-*/;,><!.:":
-            tkn = chr
-        elif chr in " \n":
+        #elif chr in "()[]=+-*/;,><!.:":
+        #    tkn = chr
+        elif (chr == "{"):
+            self.matchComentario()
             tkn = self.nextToken()
-        else: raise Exception("Caracter " + chr + " não reconhecido na gramática!")
+        elif chr in " \n":
+            if(chr == "\n"):
+                self.linha = self.linha+1
+            tkn = self.nextToken()
+        else: tkn = chr
         return tkn
 
     def matchString(self):
@@ -50,6 +59,19 @@ class Handler():
             return chr + ""
         else:
             return chr + self.matchString()
+
+    def matchComentario(self):
+        chr = self.arq.read(1)
+
+        self.pos = self.pos+1
+
+        if(chr == "}"):
+            return
+        elif(chr == "\n"):
+            self.linha = self.linha + 1
+            self.matchComentario()
+        else:
+            self.matchComentario()
 
     def matchLetraNumero(self):
         chr = self.arq.read(1)
@@ -80,8 +102,10 @@ class Handler():
     
     def matchAtribuicao(self):
         chr = self.arq.read(1)
+        self.pos = self.pos+1
         if (chr == '='):
-            self.pos = self.pos+1
             return chr
         else:
+            self.pos = self.pos-1
+            self.arq.seek(self.pos)
             return ""
