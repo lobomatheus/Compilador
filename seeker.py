@@ -13,9 +13,27 @@ class Handler():
         self.pos = 0
         self.linha=1
         self.arq = arq = open(filename, "r", encoding="utf8")
+        self.currToken = None
 
     def getLinha(self):
         return self.linha
+
+    def consumeToken(self):
+        self.currToken = None
+
+    def getToken(self):
+        if(self.currToken != None):
+            return self.currToken
+        else:
+            ret = self.nextToken()
+            if(ret == "$"):
+                tkn = Token(-1, "", "", False)
+                print("eof")
+            else:
+                tkn = matchToken(ret)
+                self.currToken = tkn
+            return tkn
+        
 
     # nextToken retorna o próximo token ou $ caso seja um valor inválido (pode ser substituido)
     # por qualquer caracter inválido para a linguagem
