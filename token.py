@@ -8,7 +8,7 @@ import re
 
 class Token():
 
-    def __init__(self, cod, token, strVal, isTerminal, linha):
+    def __init__(self, cod=0, token, strVal, isTerminal, linha):
 
         self.cod = cod
         self.token = token
@@ -74,6 +74,8 @@ def matchToken(val, linha):
         return Token(20, "TRelational",val, True, linha)
     elif(re.match("^[,]$", val)):
         return Token(23, "TVirgula", val, True, linha)
+    elif(re.match("^[.]$", val)):
+        return Token(28, "TPonto", val, True, linha)
     elif(re.match("^[+-/*]$", val)):
         return Token(21,"TOperator", val, True, linha)
     elif(re.match("^;$", val)):
@@ -86,8 +88,6 @@ def matchToken(val, linha):
         return Token(26, "TAbreParenteses", val, True, linha)
     elif(re.match("^[)]$", val)):
         return Token(27, "TFechaParenteses", val, True, linha)
-    elif(re.match("^[.]$", val)):
-        return Token(28, "TPonto", val, True, linha)
     elif(re.match("^[\"][a-zA-Z0-9\s]*[\"]$", val)):
         return Token(29, "TString", val, True, linha)
     elif(re.match("^[:]$", val)):

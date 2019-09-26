@@ -27,10 +27,9 @@ class Handler():
         else:
             ret = self.nextToken()
             if(ret == "$"):
-                tkn = Token(-1, "", "", False)
-                print("eof")
+                tkn = Token(0, "", "", False)
             else:
-                tkn = matchToken(ret)
+                tkn = matchToken(ret, self.linha)
                 self.currToken = tkn
             return tkn
         
