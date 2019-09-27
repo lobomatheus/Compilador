@@ -2,7 +2,7 @@ import sys
 from token import Token, matchToken
 from seeker import Handler
 from errors import errors
-from sintatico import programa
+from sintatico import programa, TokenTree
 
 #Essa seria a main do programa. Nela, um handler é instanciado
 #e vai solicitando os tokens. Ao invés desse while, teria que ser
@@ -14,7 +14,7 @@ handler = Handler(filename)
 tknList = []
 err = errors()
 
-programa(handler, err)
+tree = programa(handler, err)
 '''while True:
     t = handler.nextToken()
     linha = handler.getLinha()
@@ -32,4 +32,5 @@ for t in tknList:
     t.exhibit()
 print(len(tknList))
 '''
+tree.printTree(0)
 err.printError()

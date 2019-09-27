@@ -8,7 +8,7 @@ import re
 
 class Token():
 
-    def __init__(self, cod=0, token, strVal, isTerminal, linha):
+    def __init__(self, cod, token, strVal, isTerminal, linha):
 
         self.cod = cod
         self.token = token
@@ -17,7 +17,13 @@ class Token():
         self.linha = linha
 
     def exhibit(self):
-        print("{- "+self.token + ": " + self.strVal+" na linha " + str(self.linha) + " -}")
+        #print("{- "+str(self.token) + ": " + self.strVal+" na linha " + str(self.linha) + " -}")
+        if(self.isTerminal):
+            #print(str(self.token))
+            return "{- "+str(self.token) + ": " + self.strVal+" na linha " + str(self.linha) + " -}"
+        else:
+            #print(str(self.cod))
+            return "{- "+str(self.cod) + " na linha " + str(self.linha) + " -}"
 
     def getSymbol(self):
         return str(self.strVal)
