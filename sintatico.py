@@ -139,6 +139,10 @@ def Corpo4(handler, err):
         if(tk.getTokenCode() == TEND):
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
+            tk = getToken(handler, err)
+            print(tk.exhibit())
+            if(tk.getSymbol() != "$"):
+                err.addErr("fim de arquivo", tk.getSymbol(), tk.getLinha(), 2)
             print("End")
         else:
             err.addErr("end", tk.getSymbol(), tk.getLinha(), 2)
