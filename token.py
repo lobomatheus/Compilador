@@ -23,7 +23,7 @@ class Token():
             return "{- "+str(self.token) + ": " + self.strVal+" na linha " + str(self.linha) + " -}"
         else:
             #print(str(self.cod))
-            return "{- "+str(self.cod) + " na linha " + str(self.linha) + " -}"
+            return "{- <"+str(self.token) + "> na linha " + str(self.linha) + " -}"
 
     def getSymbol(self):
         return str(self.strVal)
