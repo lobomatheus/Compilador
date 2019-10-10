@@ -79,7 +79,7 @@ def panicMode(handler, err, token, tkn):
         handler.consumeToken()
         tkn = getToken(handler, err)
         if(tkn.getTokenCode() == 0):
-            print("FIM DO ARQUIVO")
+            #print("FIM DO ARQUIVO")
             break
     return tkn 
 
