@@ -3,6 +3,7 @@ from token import Token, matchToken
 from seeker import Handler
 from errors import errors
 from sintatico import programa, TokenTree
+from symb import SymbolTable
 
 #Essa seria a main do programa. Nela, um handler é instanciado
 #e vai solicitando os tokens. Ao invés desse while, teria que ser
@@ -13,8 +14,9 @@ filename = sys.argv[1]
 handler = Handler(filename)
 tknList = []
 err = errors()
+table = SymbolTable()
 
-tree = programa(handler, err)
+tree = programa(handler, err, table)
 '''while True:
     t = handler.nextToken()
     linha = handler.getLinha()

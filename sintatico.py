@@ -86,7 +86,7 @@ def panicMode(handler, err, token, tkn):
 
 
 #quando encontrar um terminal que você estava procurando, chamar handler.consumeToken()
-def programa(handler, err):
+def programa(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(72, "TPROGRAMA", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TPROGRAM):
@@ -100,7 +100,7 @@ def programa(handler, err):
             if(tk.getTokenCode() == TPONTOEVIRGULA):
                 tree.addChild(TokenTree(tk))
                 handler.consumeToken()
-                tree.addChild(Corpo(handler, err))
+                tree.addChild(Corpo(handler, err, table))
             else:
                 err.addErr(";", tk.getSymbol(), tk.getLinha(), 2)
                 tk = panicMode(handler, err, tree.getRoot(), tk)
@@ -112,44 +112,44 @@ def programa(handler, err):
         tk = panicMode(handler, err, tree.getRoot(), tk)
     return tree
 
-def Corpo(handler, err):
+def Corpo(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(34, "TCORPO", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TCONST):
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
-        tree.addChild(constantes(handler, err))
-    tree.addChild(Corpo2(handler, err))
+        tree.addChild(constantes(handler, err, table))
+    tree.addChild(Corpo2(handler, err, table))
     return tree
 
-def Corpo2(handler, err):
+def Corpo2(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(35, "TCORPO2", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TTYPE):
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
-        tree.addChild(tipos(handler, err))
-    tree.addChild(Corpo3(handler, err))
+        tree.addChild(tipos(handler, err, table))
+    tree.addChild(Corpo3(handler, err, table))
     return tree
 
-def Corpo3(handler, err):
+def Corpo3(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(36, "TCORPO3", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TVAR):
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
-        tree.addChild(variaveis(handler, err))
-    tree.addChild(Corpo4(handler, err))
+        tree.addChild(variaveis(handler, err, table))
+    tree.addChild(Corpo4(handler, err, table))
     return tree
 
-def Corpo4(handler, err):
+def Corpo4(handler, err, table):
     tree = TokenTree(Token(37, "TCORPO4", "", False, getToken(handler, err).getLinha()))
-    tree.addChild(def_rotinas(handler, err))
+    tree.addChild(def_rotinas(handler, err, table))
     tk = getToken(handler, err)
     if(tk.getTokenCode() == TBEGIN):
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
-        tree.addChild(comandos(handler, err))
+        tree.addChild(comandos(handler, err, table))
         tk = getToken(handler, err)
         if(tk.getTokenCode() == TEND):
             tree.addChild(TokenTree(tk))
@@ -167,44 +167,51 @@ def Corpo4(handler, err):
         tk = panicMode(handler, err, tree.getRoot(), tk)
     return tree
 
-def def_rotinas(handler, err):
+def def_rotinas(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(38, "TDEFROTINAS", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TFUNCTION):
         tree.addChild(TokenTree(tk))
+        table.newSymbol('function')
         handler.consumeToken()
-        tree.addChild(nome_rotina(handler, err))
+        tree.addChild(nome_rotina(handler, err, table))
         tk = getToken(handler, err)
         if(tk.getTokenCode() == TDOISPONTOS):
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
-            tree.addChild(tipo_dado(handler, err))
-            tree.addChild(bloco_rotina(handler, err))
-            tree.addChild(def_rotinas(handler, err))
+            tree.addChild(tipo_dado(handler, err, table))
+            table.saveSymbol()
+            tree.addChild(bloco_rotina(handler, err, table))
+            tree.addChild(def_rotinas(handler, err, table))
         else:
             err.addErr(":", tk.getSymbol(), tk.getLinha(), 2)
             tk = panicMode(handler, err, tree.getRoot(), tk)
     elif(tk.getTokenCode() == TPROCEDURE):
         tree.addChild(TokenTree(tk))
+        table.newSymbol('procedure')
         handler.consumeToken()
-        tree.addChild(nome_rotina(handler, err))
-        tree.addChild(bloco_rotina(handler, err))
-        tree.addChild(def_rotinas(handler, err))
+        tree.addChild(nome_rotina(handler, err, table))
+        tree.addChild(bloco_rotina(handler, err, table))
+        tree.addChild(def_rotinas(handler, err, table))
+    table.rmEscopo()
     return tree
 
-def nome_rotina(handler, err):
+def nome_rotina(handler, err, table):
     tk= getToken(handler, err)
     tree = TokenTree(Token(39, "TNOMEROTINA", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TID):
+        table.addName(tk.getSymbol())
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
         tk = getToken(handler, err)
         if(tk.getTokenCode() == TABREPARENTESES):
+            table.startParam()
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
-            tree.addChild(variaveis(handler, err))
+            tree.addChild(variaveis(handler, err, table))
             tk = getToken(handler, err)
             if(tk.getTokenCode() == TFECHAPARENTESES):
+                self.stopParam()
                 tree.addChild(TokenTree(tk))
                 handler.consumeToken()
             else:
@@ -264,19 +271,22 @@ def bloco_rotina2(handler, err):
             tk = panicMode(handler, err, tree.getRoot(), tk)
     return tree
 
-def constantes(handler, err):
+def constantes(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(44, "TCONSTANTES", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TID):
         tree.addChild(TokenTree(tk))
+        table.newSymbol('var')
+        table.addName(tk.getSymbol())
         handler.consumeToken()
         tk = getToken(handler, err)
         if(tk.getTokenCode() == TRELATIONAL and tk.getSymbol() == "="):
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
-            tree.addChild(const_valor(handler, err))
+            tree.addChild(const_valor(handler, err, table, True))
             tk = getToken(handler, err)
             if(tk.getTokenCode() == TPONTOEVIRGULA):
+                table.saveSymbol()
                 tree.addChild(TokenTree(tk))
                 handler.consumeToken()
                 tree.addChild(constantes2(handler, err))
@@ -324,7 +334,9 @@ def tipos(handler, err):
     tk=getToken(handler, err)
     tree = TokenTree(Token(47, "TTIPOS", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TID):
+        table.newSymbol('tipo')
         tree.addChild(TokenTree(tk))
+        table.addName(tk.getSymbol())
         handler.consumeToken()
         tk=getToken(handler, err)
         if(tk.getTokenCode() == TRELATIONAL and tk.getSymbol()=="="):
@@ -353,13 +365,21 @@ def tipo_dado(handler, err):
     tk = getToken(handler, err)
     tree = TokenTree(Token(49, "TTIPODADO", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TINTEGER):
+        table.addTipo('int')
+        table.saveSymbol()
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
     elif(tk.getTokenCode() == TREAL):
+        table.addTipo('real')
+        table.saveSymbol()
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
     elif(tk.getTokenCode() == TARRAY):
         tree.addChild(TokenTree(tk))
+        table.addTipo(table.arrayNum())
+        table.saveSymbol()
+        table.newSymbol('array')
+        table.addName(table.arrayNum())
         handler.consumeToken()
         tk = getToken(handler, err)
         if(tk.getTokenCode() == TABRECOLCHETES):
@@ -368,6 +388,7 @@ def tipo_dado(handler, err):
             tk = getToken(handler, err)
             if(tk.getTokenCode() == TNUM):
                 tree.addChild(TokenTree(tk))
+                table.addElemNum(tk.getSymbol())
                 handler.consumeToken()
                 tk = getToken(handler, err)
                 if(tk.getTokenCode() == TFECHACOLCHETES):
@@ -378,6 +399,7 @@ def tipo_dado(handler, err):
                         tree.addChild(TokenTree(tk))
                         handler.consumeToken()
                         tree.addChild(tipo_dado(handler, err))
+                        table.saveSymbol()
                     else:
                         err.addErr("of", tk.getSymbol(), tk.getLinha(), 2)
                         tk = panicMode(handler, err, tree.getRoot(), tk)
@@ -392,16 +414,23 @@ def tipo_dado(handler, err):
             tk = panicMode(handler, err, tree.getRoot(), tk)
     elif(tk.getTokenCode() == TRECORD):
         tree.addChild(TokenTree(tk))
+        table.addTipo('record')
+        scope = table.getName()
+        table.saveSymbol()
         handler.consumeToken()
+        table.addEscopo(scope)
         tree.addChild(variaveis(handler, err))
         tk = getToken(handler, err)
         if(tk.getTokenCode() == TEND):
+            table.rmEscopo()
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
         else:
             err.addErr("end", tk.getSymbol(), tk.getLinha(), 2)
             tk = panicMode(handler, err, tree.getRoot(), tk)
     elif(tk.getTokenCode() == TID):
+        table.addTipo(tk.getSymbol())
+        table.saveSymbol()
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
     else:
@@ -411,6 +440,7 @@ def tipo_dado(handler, err):
 
 def variaveis(handler, err):
     tree = TokenTree(Token(50, "TVARIAVEIS", "", False, getToken(handler, err).getLinha()))
+    table.newSymbol('var')
     tree.addChild(lista_id(handler, err))
     tk = getToken(handler, err)
     if(tk.getTokenCode() == TDOISPONTOS):
@@ -436,6 +466,7 @@ def lista_id(handler, err):
     tk = getToken(handler, err)
     tree = TokenTree(Token(52, "TLISTAID", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TID):
+        table.addName(tk.getSymbol())
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
         tree.addChild(lista_id2(handler, err))
@@ -624,14 +655,16 @@ def felse(handler, err):
         tree.addChild(bloco(handler, err))
     return tree
 
-def const_valor(handler, err):
+def const_valor(handler, err,table, adding=False):
     tk = getToken(handler, err)
     tree = TokenTree(Token(59, "TCONSTVALOR", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TSTRING):
         tree.addChild(TokenTree(tk))
+        if(adding) table.addTipo('string')
         handler.consumeToken()
     else:
         tree.addChild(exp_mat(handler, err))
+        if(adding) table.addTipo('real')
     return tree
 
 def exp_logica(handler, err):
