@@ -34,5 +34,6 @@ for t in tknList:
     t.exhibit()
 print(len(tknList))
 '''
-tree.printTree(0)
+#tree.printTree(0)
+table.printTable()
 err.printError()
