@@ -34,6 +34,9 @@ class Token():
     def getTokenCode(self):
         return self.cod
 
+    def getType(self):
+        return self.token
+
 
 #A função matchToken não está dentro da classe token, ela
 #apenas instancia um novo token a partir da string dada.
