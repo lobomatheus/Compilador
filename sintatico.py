@@ -70,6 +70,7 @@ def getToken(handler, err):
     tkn = handler.getToken()
     if(tkn.getTokenCode() == -1):
         err.addErr(tkn.getSymbol(), "TError", tkn.getLinha(), 1)
+        handler.consumeToken()
         return getToken(handler, err)
     #tkn.exhibit()
     return tkn
@@ -464,6 +465,11 @@ def tipo_dado(handler, err, table):
 
 def variaveis(handler, err, table):
     tree = TokenTree(Token(50, "TVARIAVEIS", "", False, getToken(handler, err).getLinha()))
+    
+    tk=getToken(handler, err)
+    if(tk.getTokenCode()!=TID):
+        return tree
+    
     table.newSymbol('var')
     tree.addChild(lista_id(handler, err, table))
     tk = getToken(handler, err)
@@ -574,9 +580,10 @@ def comandos(handler, err, table):
         idAnt = tk
         table.iniciarVerTipos(tk.getSymbol())
         handler.consumeToken()
-        tree.addChild(nome2(handler, err, table, idAnt))
+        tree.addChild(nome2(handler, err, table, idAnt, True))
         tk=getToken(handler, err)
         if(tk.getTokenCode() == TATRIBUICAO):
+            table.setAtribuicao()
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
             tree.addChild(exp_mat(handler, err, table))
@@ -674,6 +681,7 @@ def comandos3(handler, err, table):
         tree.addChild(nome2(handler, err, table, idAnt))
         tk=getToken(handler, err)
         if(tk.getTokenCode() == TATRIBUICAO):
+            table.setAtribuicao()
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
             tree.addChild(exp_mat(handler, err, table))
@@ -739,10 +747,16 @@ def parametro(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(62, "TPARAMETRO", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TNUM):
+
+        table.verificarParametro(err, tk)
+        
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
         tree.addChild(parametro2(handler, err, table))
     elif(tk.getTokenCode() == TID):
+
+        table.verificarParametro(err, tk)
+        
         #----------verifica se foi declarado
         table.verificarDeclaracao(tk,err)
         #--------------------------------
@@ -842,13 +856,17 @@ def nome3(handler, err, table, verTk): #recebendo o token de verificação
     tree = TokenTree(Token(69, "TNOME3", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TABREPARENTESES):
         #----Verificacao se eh funcao
-        table.verificarFuncao(verTk, err)
+        isFuncao = table.verificarFuncao(verTk, err)
+        if(isFuncao):
+            #----------------------------
+            table.inicarVerificacaoParametros(verTk)
         #----------------------------
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
         tree.addChild(parametro(handler, err, table))
         tk = getToken(handler, err)
         if(tk.getTokenCode() == TFECHAPARENTESES):
+            if(isFuncao): table.finalizarVerificacaoParametros(err)
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
         else:
@@ -862,6 +880,8 @@ def nome(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(70, "TNOME", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TID):
+        #-------------------------
+        table.verificarParametro(err, tk)
         #----------verifica se foi declarado
         table.verificarDeclaracao(tk,err)
         #--------------------------------
@@ -885,7 +905,7 @@ def nome2(handler, err, table, idAnt):
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
         #-- passa para escopo do id anterior
-        table.addEscopo(idAnt.getSymbol())
+        table.addEscopo(table.getTipo2(idAnt.getSymbol(), table.peekEscopo()))
         #escopo = tipo do record
         #table.addEscopo(table.getTipo2(idAnt.getSymbol(), table.peekEscopo()))
         #print(table.peekEscopo())

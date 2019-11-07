@@ -22,6 +22,16 @@ class SymbolTable:
         self.idEsquerda = None
         self.escopoEsquerda = None
         self.confere = False
+
+        #-------------------
+        self.verPar=False
+        self.paramNum=0
+        self.paramFunc=None
+        self.function = None
+        #-------------------
+
+        self.atribuindo = False
+
     
     def printTable(self):
         for s in self.table:
@@ -151,6 +161,8 @@ class SymbolTable:
         funcs = list(filter((lambda x: (x[1] == 'function' or x[1] == 'procedure') and x[0] == id), self.table))
         if(len(funcs) == 0):
             err.addErr(tk.getSymbol(), tk, tk.getLinha(), 6)
+            return False
+        return True
 
 
     #---------------------------provavelmente nao sera necessario (regra 1 cobre)
@@ -187,12 +199,20 @@ class SymbolTable:
         else:
             return tipo
 
+    def setAtribuicao(self):
+        self.atribuindo = True
+
     def iniciarVerTipos(self, id):
+        tipo = self.getTipo(id, self.peekEscopo())
+        #if(getTipo(self.idEsquerda, self.escopoEsquerda) == 'record'):
+
+        
+        #if(tipo != 'record'):
         self.idEsquerda = id
         self.escopoEsquerda = self.peekEscopo()
 
     def verificarTipos(self, tk, err):
-        if(self.idEsquerda != None):
+        if(self.idEsquerda != None and self.atribuindo != False):
             id2 = tk.getSymbol()
             if(tk.getType()== 'TNum'):
                 tipo1 = self.getTipo(self.idEsquerda, self.escopoEsquerda)
@@ -202,14 +222,16 @@ class SymbolTable:
                 self.escopoEsquerda = None
             else:
                 tipo2 = self.getTipo(id2, self.peekEscopo())
-                if(tipo2 != 'record'):
-                    #print(tipo2 + ' - ' + self.peekEscopo() + ' : ' + self.idEsquerda)
-                    tipo1 = self.getTipo(self.idEsquerda, self.escopoEsquerda)
-                    if(tipo1 != tipo2):
-                        if(not(tipo1=='int' and tipo2=='real')):
-                            err.addErr(tk.getSymbol(), tk, tk.getLinha(), 10)
-                    self.idEsquerda = None
-                    self.escopoEsquerda = None
+                #if(tipo2 != 'record'):
+                #print(tipo2 + ' - ' + self.peekEscopo() + ' : ' + self.idEsquerda)
+                tipo1 = self.getTipo(self.idEsquerda, self.escopoEsquerda)
+                if(tipo1 != tipo2):
+                    if(not(tipo1=='int' and tipo2=='real') and not(tipo2=='int' and tipo1=='real')):
+                        print(self.idEsquerda + tipo1 + ' - ' + id2 + tipo2)
+                        err.addErr(tk.getSymbol(), tk, tk.getLinha(), 10)
+                self.idEsquerda = None
+                self.escopoEsquerda = None
+                self.atribuindo=False
 
 
     def verificarRegistro(self, tk, err):
@@ -217,9 +239,17 @@ class SymbolTable:
         escopoAtual = self.peekEscopo()
         #print(escopoAtual)
         #print(self.getRecords(escopoAtual))
-        reg = list(filter((lambda x: (x[3] == escopoAtual and x[0] in self.getElements('record', escopoAtual)) and x[0] == id), self.table))
+        tipo = self.getTipo(id, escopoAtual)
+        if(tipo != 'record'):
+            print(tipo)
+            err.addErr(tk.getSymbol(), tk, tk.getLinha(), 7)
+
+
+
+    """         reg = list(filter((lambda x: (x[3] == escopoAtual and self.tratarTiposDefinidos(x[2]) =='record') and x[0] == id), self.table))
+        print(reg)
         if(len(reg) == 0):
-            reg = list(filter((lambda x: (x[3] == 'global' and x[0] in self.getElements('record', 'global')) and x[0] == id), self.table))
+            reg = list(filter((lambda x: (x[3] == 'global' and self.tratarTiposDefinidos(x[2]) =='record') and x[0] == id), self.table))
             if(len(reg) == 0):
                 if(escopoAtual != 'global'):
                     funcs = list(filter((lambda x: x[0]==escopoAtual and (x[1]=='function'or x[1]=='procedure')),self.table))
@@ -230,8 +260,8 @@ class SymbolTable:
                                 reg.append(p)
                 #print(reg, tk.getLinha())
                 if(len(reg)==0):
-                    err.addErr(tk.getSymbol(), tk, tk.getLinha(), 7)
-        
+                    err.addErr(tk.getSymbol(), tk, tk.getLinha(), 7)"""
+                        
     def getElements(self, classe, escopo):
         rec = list(filter((lambda x: (self.getTipo(x[0],escopo)==classe and x[3]==escopo)), self.table))
         rec2 = []
@@ -239,10 +269,31 @@ class SymbolTable:
             rec2.append(r[0])
         return rec2
 
+    def tratarTipoArray(self, tipo):
+        tipos = list(filter((lambda x: (x[1]=='tipo' or x[1]=='array') and x[0]==tipo), self.table))
+        if(len(tipos) > 0):
+            if(tipos[0][1] != 'array'):
+                return self.tratarTipoArray(tipos[0][2])
+            else:
+                return tipos[0][1]
+        else:
+            return tipo
+
+
     def verificarVetor(self, tk, err):
         id = tk.getSymbol()
         escopoAtual = self.peekEscopo()
-        reg = list(filter((lambda x: (x[3] == escopoAtual and x[0] in self.getElements('array', escopoAtual)) and x[0] == id), self.table))
+
+        tipo = self.tratarTipoArray(self.getTipo2(id, escopoAtual))
+
+
+        if(tipo != 'array'):
+            #print(tipo)
+            err.addErr(tk.getSymbol(), tk, tk.getLinha(), 5)
+
+
+
+        """ reg = list(filter((lambda x: (x[3] == escopoAtual and x[0] in self.getElements('array', escopoAtual)) and x[0] == id), self.table))
         if(len(reg) == 0):
             reg = list(filter((lambda x: (x[3] == 'global' and x[0] in self.getElements('array', 'global')) and x[0] == id), self.table))
             if(len(reg) == 0):
@@ -254,7 +305,7 @@ class SymbolTable:
                             if(p[0] == id):
                                 reg.append(p)
                 if(len(reg)==0):
-                    err.addErr(tk.getSymbol(), tk, tk.getLinha(), 5)
+                    err.addErr(tk.getSymbol(), tk, tk.getLinha(), 5) """
         
 
     def setVerificacao(self, estado):
@@ -280,3 +331,61 @@ class SymbolTable:
                                     dec.append(p)
                     if (len(dec) == 0):
                         err.addErr(tk.getSymbol(), tk, tk.getLinha(), 3)
+
+    #---------------------------------
+    #----------Verificação dos parametros
+
+    def getParams(self, fId):
+        return list(filter((lambda x: x[0]==fId and (x[1]=='function' or x[1]=='procedure')), self.table))[0][4]
+    
+    def getTipo2(self, id, escopo):
+        for s in self.table:
+            if(s[0] == id and s[3]==escopo):
+                return s[2]
+        for s in self.table:
+            if(s[0] == id and s[3]=='global'):
+                return s[2]
+        func = list(filter((lambda x: x[0]==escopo), self.table))
+        if(len(func) > 0):
+            for s in func[0][4]:
+                if(s[0] == id):
+                    return s[2]
+        return ''
+
+    def inicarVerificacaoParametros(self, tk):
+        self.verPar=True
+        self.paramFunc = self.getParams(tk.getSymbol())
+        self.function = tk
+
+    def finalizarVerificacaoParametros(self, err):
+        if(self.paramNum != len(self.paramFunc)):
+            print(self.paramNum)
+            print(self.paramFunc)
+            tk = self.function
+            err.addErr(tk.getSymbol(), tk, tk.getLinha(), 9)
+
+        self.verPar= False
+        self.paramFunc=None
+        self.paramNum = 0
+        self.function=None
+
+    def verificarParametro(self,err, tk):
+        if(self.verPar):
+            if(self.paramNum >= len(self.paramFunc)):
+                err.addErr(tk.getSymbol(), tk, tk.getLinha(), 9)
+            else:
+                if(tk.getType()=='TNum'):
+                    tipo1 = self.paramFunc[self.paramNum][2]
+                    if(tipo1 != 'real' and tipo1 != 'int'):
+                        err.addErr(tk.getSymbol(), tk, tk.getLinha(), 9)
+                    self.paramNum = self.paramNum + 1
+                else:
+                    tipo = self.getTipo2(tk.getSymbol(), self.peekEscopo())
+                    if(tipo != 'record'):
+                        tipo1 = self.paramFunc[self.paramNum][2]
+                        if(tipo != tipo1):
+                            if(not(tipo=='int' and tipo1=='real')and not(tipo1=='int' and tipo=='real')):
+                                err.addErr(tk.getSymbol(), tk, tk.getLinha(), 9)
+                            self.paramNum = self.paramNum + 1
+                        else:
+                            self.paramNum = self.paramNum + 1
