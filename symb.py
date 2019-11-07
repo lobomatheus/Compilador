@@ -21,7 +21,17 @@ class SymbolTable:
         self.arrayCount = 0
         self.idEsquerda = None
         self.escopoEsquerda = None
+        self.idDireita=None 
+        self.escopoDireita=None
+        self.verificandoDireita=False 
+        self.verificandoEsquerda=False
+        self.pauseTipos=True
+        self.direitaArray=False 
+        self.esquerdaArray=False
         self.confere = False
+
+        self.paramTk=None 
+        self.paramEscopo=None
 
         #-------------------
         self.verPar=False
@@ -29,8 +39,6 @@ class SymbolTable:
         self.paramFunc=None
         self.function = None
         #-------------------
-
-        self.atribuindo = False
 
     
     def printTable(self):
@@ -174,65 +182,92 @@ class SymbolTable:
 
 
     
-    #---------------------------
-    def getTipo(self, id, escopo):
+
+    #-------------------------------------------------------------------------
+    def iniciarVerTipoEsquerda(self, tk):
+        self.idEsquerda = tk
+        self.escopoEsquerda = self.peekEscopo()
+        self.verificandoEsquerda = True
+        self.pauseTipos=False
+        
+
+    def finalizarVerTipoEsquerda(self):
+        self.verificandoEsquerda = False
+
+
+    def iniciarVerTipoDireita(self):
+        self.verificandoDireita = True
+        self.pauseTipos=False
+
+
+    def finalizarVerTipoDireita(self, err):
+        
+        tipo1 = self.getTipo(self.idEsquerda.getSymbol(), self.escopoEsquerda, self.esquerdaArray)
+
+        print(self.idDireita)
+        if(self.idDireita.getType()== 'TNum'):
+            if tipo1 != 'int' and tipo1 != 'real':
+                err.addErr(self.idDireita.getSymbol(), self.idDireita, self.idDireita.getLinha(), 10)
+        else:
+            tipo2 = self.getTipo(self.idDireita.getSymbol(), self.escopoDireita, self.direitaArray)
+            if(tipo1 != tipo2):
+                if(not(tipo1=='int' and tipo2=='real') and not(tipo2=='int' and tipo1=='real')):
+                    err.addErr(self.idDireita.getSymbol(), self.idDireita, self.idDireita.getLinha(), 10)
+        
+        self.idEsquerda=None 
+        self.idDireita=None 
+        self.escopoDireita=None 
+        self.escopoEsquerda=None
+        self.verificandoDireita = False
+        self.direitaArray=False
+        self.esquerdaArray=False
+        self.pauseTipos=True
+
+    def verificarTipo(self, tk):
+        if(self.pauseTipos):
+            return
+        if(self.verificandoEsquerda):
+            self.idEsquerda = tk
+            self.escopoEsquerda = self.peekEscopo()
+        
+        elif(self.verificandoDireita):
+            self.idDireita = tk
+            self.escopoDireita = self.peekEscopo()
+
+    def getTipo(self, id, escopo, val=False):
         for s in self.table:
             if(s[0] == id and s[3]==escopo):
-                return self.tratarTiposDefinidos(s[2])
+                return self.tratarTiposDefinidos(s[2], val)
         for s in self.table:
             if(s[0] == id and s[3]=='global'):
-                return self.tratarTiposDefinidos(s[2])
+                return self.tratarTiposDefinidos(s[2], val)
         func = list(filter((lambda x: x[0]==escopo), self.table))
         if(len(func) > 0):
             if(func[0][1] == 'function' or func[0][1] == 'procedure'):
                 for s in func[0][4]:
                     if(s[0] == id):
-                        return self.tratarTiposDefinidos(s[2])
+                        return self.tratarTiposDefinidos(s[2], val)
             else:
-                return self.tratarTiposDefinidos(func[0][0])
+                return self.tratarTiposDefinidos(func[0][0], val)
         return ''
     
-    def tratarTiposDefinidos(self, tipo):
-        tipos = list(filter((lambda x: (x[1]=='tipo' or x[1]=='array') and x[0]==tipo), self.table))
+    def tratarTiposDefinidos(self, tipo, val):
+        if(not(val)): tipos = list(filter((lambda x: (x[1]=='tipo') and x[0]==tipo), self.table))
+        else: tipos = list(filter((lambda x: (x[1]=='tipo' or x[1]=='array') and x[0]==tipo), self.table))
         if(len(tipos) > 0):
-            return self.tratarTiposDefinidos(tipos[0][2])
+            return self.tratarTiposDefinidos(tipos[0][2], val)
         else:
             return tipo
 
-    def setAtribuicao(self):
-        self.atribuindo = True
 
-    def iniciarVerTipos(self, id):
-        tipo = self.getTipo(id, self.peekEscopo())
-        #if(getTipo(self.idEsquerda, self.escopoEsquerda) == 'record'):
 
-        
-        #if(tipo != 'record'):
-        self.idEsquerda = id
-        self.escopoEsquerda = self.peekEscopo()
+    def pauseVerTipos(self, val):
+        self.pauseTipos = val
+        if(self.idDireita): self.direitaArray=True
+        elif(self.idEsquerda): self.esquerdaArray=True
+        elif(self.verPar): self.paramVetor=True
 
-    def verificarTipos(self, tk, err):
-        if(self.idEsquerda != None and self.atribuindo != False):
-            id2 = tk.getSymbol()
-            if(tk.getType()== 'TNum'):
-                tipo1 = self.getTipo(self.idEsquerda, self.escopoEsquerda)
-                if tipo1 != 'int' and tipo1 != 'real':
-                    err.addErr(tk.getSymbol(), tk, tk.getLinha(), 10)
-                self.idEsquerda = None
-                self.escopoEsquerda = None
-            else:
-                tipo2 = self.getTipo(id2, self.peekEscopo())
-                #if(tipo2 != 'record'):
-                #print(tipo2 + ' - ' + self.peekEscopo() + ' : ' + self.idEsquerda)
-                tipo1 = self.getTipo(self.idEsquerda, self.escopoEsquerda)
-                if(tipo1 != tipo2):
-                    if(not(tipo1=='int' and tipo2=='real') and not(tipo2=='int' and tipo1=='real')):
-                        print(self.idEsquerda + tipo1 + ' - ' + id2 + tipo2)
-                        err.addErr(tk.getSymbol(), tk, tk.getLinha(), 10)
-                self.idEsquerda = None
-                self.escopoEsquerda = None
-                self.atribuindo=False
-
+    #-------------------------------------------------------------------------
 
     def verificarRegistro(self, tk, err):
         id = tk.getSymbol()
@@ -338,6 +373,13 @@ class SymbolTable:
     def getParams(self, fId):
         return list(filter((lambda x: x[0]==fId and (x[1]=='function' or x[1]=='procedure')), self.table))[0][4]
     
+    def tratarTiposDefinidos2(self, tipo, val):
+        tipos = list(filter((lambda x: (x[1]=='array') and x[0]==tipo), self.table))
+        if(len(tipos) > 0 and val):
+            return self.tratarTiposDefinidos2(tipos[0][2], val)
+        else:
+            return tipo
+
     def getTipo2(self, id, escopo):
         for s in self.table:
             if(s[0] == id and s[3]==escopo):
@@ -359,8 +401,6 @@ class SymbolTable:
 
     def finalizarVerificacaoParametros(self, err):
         if(self.paramNum != len(self.paramFunc)):
-            print(self.paramNum)
-            print(self.paramFunc)
             tk = self.function
             err.addErr(tk.getSymbol(), tk, tk.getLinha(), 9)
 
@@ -368,8 +408,17 @@ class SymbolTable:
         self.paramFunc=None
         self.paramNum = 0
         self.function=None
+        self.paramTk =None 
+        self.paramEscopo=None
 
-    def verificarParametro(self,err, tk):
+    def addParam(self, tk):
+        if(self.verPar):
+            self.paramTk = tk
+            self.paramEscopo = self.peekEscopo()
+
+    def verificarParametro(self,err):
+        tk = self.paramTk
+        paramEscopo = self.paramEscopo
         if(self.verPar):
             if(self.paramNum >= len(self.paramFunc)):
                 err.addErr(tk.getSymbol(), tk, tk.getLinha(), 9)
@@ -380,7 +429,7 @@ class SymbolTable:
                         err.addErr(tk.getSymbol(), tk, tk.getLinha(), 9)
                     self.paramNum = self.paramNum + 1
                 else:
-                    tipo = self.getTipo2(tk.getSymbol(), self.peekEscopo())
+                    tipo = self.getTipo2(tk.getSymbol(), paramEscopo)
                     if(tipo != 'record'):
                         tipo1 = self.paramFunc[self.paramNum][2]
                         if(tipo != tipo1):

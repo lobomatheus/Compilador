@@ -576,17 +576,19 @@ def comandos(handler, err, table):
         #----------verifica se foi declarado
         table.verificarDeclaracao(tk,err)
         #--------------------------------
+        table.iniciarVerTipoEsquerda(tk)
         tree.addChild(TokenTree(tk))
         idAnt = tk
-        table.iniciarVerTipos(tk.getSymbol())
         handler.consumeToken()
-        tree.addChild(nome2(handler, err, table, idAnt, True))
+        tree.addChild(nome2(handler, err, table, idAnt))
         tk=getToken(handler, err)
         if(tk.getTokenCode() == TATRIBUICAO):
-            table.setAtribuicao()
+            table.finalizarVerTipoEsquerda()
+            table.iniciarVerTipoDireita()
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
             tree.addChild(exp_mat(handler, err, table))
+            table.finalizarVerTipoDireita(err)
             tree.addChild(comandos2(handler, err, table))
         else:
             err.addErr(":=", tk.getSymbol(), tk.getLinha(), 2)
@@ -674,19 +676,21 @@ def comandos3(handler, err, table):
         #----------verifica se foi declarado
         table.verificarDeclaracao(tk,err)
         #--------------------------------
+        table.iniciarVerTipoEsquerda(tk)
         tree.addChild(TokenTree(tk))
         idAnt = tk
-        table.iniciarVerTipos(tk.getSymbol())
         handler.consumeToken()
         tree.addChild(nome2(handler, err, table, idAnt))
         tk=getToken(handler, err)
         if(tk.getTokenCode() == TATRIBUICAO):
-            table.setAtribuicao()
+            table.finalizarVerTipoEsquerda()
+            table.iniciarVerTipoDireita()
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
             tree.addChild(exp_mat(handler, err, table))
             tk=getToken(handler, err)
             if(tk.getTokenCode() == TPONTOEVIRGULA):
+                table.finalizarVerTipoDireita(err)
                 tree.addChild(TokenTree(tk))
                 handler.consumeToken()
             else:
@@ -748,14 +752,15 @@ def parametro(handler, err, table):
     tree = TokenTree(Token(62, "TPARAMETRO", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TNUM):
 
-        table.verificarParametro(err, tk)
+        table.addParam(tk)
         
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
+        table.verificarParametro(err)
         tree.addChild(parametro2(handler, err, table))
     elif(tk.getTokenCode() == TID):
 
-        table.verificarParametro(err, tk)
+        table.addParam( tk)
         
         #----------verifica se foi declarado
         table.verificarDeclaracao(tk,err)
@@ -764,6 +769,7 @@ def parametro(handler, err, table):
         idAnt = tk
         handler.consumeToken()
         tree.addChild(nome2(handler, err, table, idAnt))
+        table.verificarParametro(err)
         tree.addChild(parametro2(handler, err, table))
     return tree
 
@@ -780,8 +786,8 @@ def exp_mat(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(64, "TEXPMAT", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TNUM):
+        table.verificarTipo(tk)
         tree.addChild(TokenTree(tk))
-        table.verificarTipos(tk, err)
         handler.consumeToken()
         tree.addChild(exp_mat2(handler, err, table))
     elif(tk.getTokenCode() == TABREPARENTESES):
@@ -835,14 +841,17 @@ def nome_num(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(68, "TNOMENUM", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TNUM):
+        table.verificarTipo(tk)
+        table.addParam(tk)
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
     elif(tk.getTokenCode() == TID):
         #----------verifica se foi declarado
         table.verificarDeclaracao(tk,err)
         #--------------------------------
+        table.verificarTipo(tk)
+        table.addParam(tk)
         tree.addChild(TokenTree(tk))
-        table.verificarTipos(tk, err)
         verificationToken = tk
         handler.consumeToken()
         tree.addChild(nome3(handler, err, table, verificationToken))   # Passar o id para nome3
@@ -881,13 +890,13 @@ def nome(handler, err, table):
     tree = TokenTree(Token(70, "TNOME", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TID):
         #-------------------------
-        table.verificarParametro(err, tk)
+        table.addParam(tk)
         #----------verifica se foi declarado
         table.verificarDeclaracao(tk,err)
         #--------------------------------
+        table.verificarTipo(tk)
         tree.addChild(TokenTree(tk))
         idAnt = tk
-        table.verificarTipos(tk, err)
         handler.consumeToken()
         tree.addChild(nome2(handler, err, table, idAnt))
     else:
@@ -912,6 +921,7 @@ def nome2(handler, err, table, idAnt):
         tree.addChild(nome(handler, err, table))
         table.rmEscopo()
     elif(tk.getTokenCode() == TABRECOLCHETES):
+        table.pauseVerTipos(True)
         #---verifica se é vetor
         table.verificarVetor(idAnt, err)
         #------------------------------
@@ -920,6 +930,7 @@ def nome2(handler, err, table, idAnt):
         tree.addChild(nome_num(handler, err, table))
         tk = getToken(handler, err)
         if(tk.getTokenCode() == TFECHACOLCHETES):
+            table.pauseVerTipos(False)
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
         else:
