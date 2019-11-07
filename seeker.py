@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from token import Token, matchToken
 
 '''
@@ -12,7 +13,7 @@ class Handler():
     def __init__(self, filename):
         self.pos = 0
         self.linha=1
-        self.arq = arq = open(filename, "r", encoding="utf8")
+        self.arq = arq = open(filename, "r")
         self.currToken = None
 
     def getLinha(self):

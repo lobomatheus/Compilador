@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from token import *
 from seeker import Handler
 from follow import *
@@ -155,7 +157,7 @@ def Corpo4(handler, err, table):
             tree.addChild(TokenTree(tk))
             handler.consumeToken()
             tk = getToken(handler, err)
-            print(tk.exhibit())
+            #print(tk.exhibit())
             if(tk.getSymbol() != "$"):
                 err.addErr("fim de arquivo", tk.getSymbol(), tk.getLinha(), 2)
         else:
@@ -190,6 +192,7 @@ def def_rotinas(handler, err, table):
         table.newSymbol('procedure')
         handler.consumeToken()
         tree.addChild(nome_rotina(handler, err, table))
+        #print(table.peekEscopo())
         table.saveSymbol()
         tree.addChild(bloco_rotina(handler, err, table))
         table.rmEscopo()
@@ -237,8 +240,11 @@ def bloco_rotina(handler, err, table):
         tree.addChild(variaveis(handler, err, table))
         tk = getToken(handler, err)
     if(tk.getTokenCode() == TID):
+        #----------verifica se foi declarado
+        table.verificarDeclaracao(tk,err)
+        #--------------------------------
         tree.addChild(TokenTree(tk))
-        idAnt = tk.getSymbol()
+        idAnt = tk
         handler.consumeToken()
         tree.addChild(bloco_rotina2(handler, err, table, idAnt))
     else:
@@ -444,6 +450,9 @@ def tipo_dado(handler, err, table):
             err.addErr("end", tk.getSymbol(), tk.getLinha(), 2)
             tk = panicMode(handler, err, tree.getRoot(), tk)
     elif(tk.getTokenCode() == TID):
+        #----------verifica se foi declarado
+        table.verificarDeclaracao(tk,err)
+        #--------------------------------
         table.addTipo(tk.getSymbol())
         table.saveSymbol()
         tree.addChild(TokenTree(tk))
@@ -506,6 +515,9 @@ def lista_id3(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(42, "TLISTAID3", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TID):
+        #----------verifica se foi declarado
+        table.verificarDeclaracao(tk,err)
+        #--------------------------------
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
         tree.addChild(variaveis(handler, err, table))
@@ -521,6 +533,7 @@ def lista_id4(handler, err, table):
     return tree
                     
 def comandos(handler, err, table):
+    table.setVerificacao(True)
     tk = getToken(handler, err)
     tree = TokenTree(Token(54, "TCOMANDOS", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TWHILE):
@@ -554,8 +567,11 @@ def comandos(handler, err, table):
         tree.addChild(nome(handler, err, table))
         tree.addChild(comandos2(handler, err, table))
     elif(tk.getTokenCode() == TID):
+        #----------verifica se foi declarado
+        table.verificarDeclaracao(tk,err)
+        #--------------------------------
         tree.addChild(TokenTree(tk))
-        idAnt = tk.getSymbol()
+        idAnt = tk
         table.iniciarVerTipos(tk.getSymbol())
         handler.consumeToken()
         tree.addChild(nome2(handler, err, table, idAnt))
@@ -568,6 +584,7 @@ def comandos(handler, err, table):
         else:
             err.addErr(":=", tk.getSymbol(), tk.getLinha(), 2)
             tk = panicMode(handler, err, tree.getRoot(), tk)
+    table.setVerificacao(False)
     return tree
 
 def bloco(handler, err, table):
@@ -589,6 +606,7 @@ def bloco(handler, err, table):
     return tree
 
 def comandos3(handler, err, table):
+    table.setVerificacao(True)
     tk = getToken(handler, err)
     tree = TokenTree(Token(56, "TCOMANDOS3", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TWHILE):
@@ -646,8 +664,11 @@ def comandos3(handler, err, table):
             err.addErr(";", tk.getSymbol(), tk.getLinha(), 2)
             tk = panicMode(handler, err, tree.getRoot(), tk)
     elif(tk.getTokenCode() == TID):
+        #----------verifica se foi declarado
+        table.verificarDeclaracao(tk,err)
+        #--------------------------------
         tree.addChild(TokenTree(tk))
-        idAnt = tk.getSymbol()
+        idAnt = tk
         table.iniciarVerTipos(tk.getSymbol())
         handler.consumeToken()
         tree.addChild(nome2(handler, err, table, idAnt))
@@ -666,6 +687,7 @@ def comandos3(handler, err, table):
         else:
             err.addErr(":=", tk.getSymbol(), tk.getLinha(), 2)
             tk = panicMode(handler, err, tree.getRoot(), tk)
+    table.setVerificacao(False)
     return tree
 
 def felse(handler, err, table):
@@ -721,8 +743,11 @@ def parametro(handler, err, table):
         handler.consumeToken()
         tree.addChild(parametro2(handler, err, table))
     elif(tk.getTokenCode() == TID):
+        #----------verifica se foi declarado
+        table.verificarDeclaracao(tk,err)
+        #--------------------------------
         tree.addChild(TokenTree(tk))
-        idAnt = tk.getSymbol()
+        idAnt = tk
         handler.consumeToken()
         tree.addChild(nome2(handler, err, table, idAnt))
         tree.addChild(parametro2(handler, err, table))
@@ -799,6 +824,9 @@ def nome_num(handler, err, table):
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
     elif(tk.getTokenCode() == TID):
+        #----------verifica se foi declarado
+        table.verificarDeclaracao(tk,err)
+        #--------------------------------
         tree.addChild(TokenTree(tk))
         table.verificarTipos(tk, err)
         verificationToken = tk
@@ -827,15 +855,18 @@ def nome3(handler, err, table, verTk): #recebendo o token de verificação
             err.addErr(")", tk.getSymbol(), tk.getLinha(), 2)
             tk = panicMode(handler, err, tree.getRoot(), tk)
     else:
-        tree.addChild(nome2(handler, err, table, verTk.getSymbol()))
+        tree.addChild(nome2(handler, err, table, verTk))
     return tree
 
 def nome(handler, err, table):
     tk = getToken(handler, err)
     tree = TokenTree(Token(70, "TNOME", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TID):
+        #----------verifica se foi declarado
+        table.verificarDeclaracao(tk,err)
+        #--------------------------------
         tree.addChild(TokenTree(tk))
-        idAnt = tk.getSymbol()
+        idAnt = tk
         table.verificarTipos(tk, err)
         handler.consumeToken()
         tree.addChild(nome2(handler, err, table, idAnt))
@@ -848,13 +879,22 @@ def nome2(handler, err, table, idAnt):
     tk = getToken(handler, err)
     tree = TokenTree(Token(71, "TNOME2", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TPONTO):
+        #---verifica se é register
+        table.verificarRegistro(idAnt, err)
+        #------------------------------
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
         #-- passa para escopo do id anterior
-        table.addEscopo(idAnt)
+        table.addEscopo(idAnt.getSymbol())
+        #escopo = tipo do record
+        #table.addEscopo(table.getTipo2(idAnt.getSymbol(), table.peekEscopo()))
+        #print(table.peekEscopo())
         tree.addChild(nome(handler, err, table))
         table.rmEscopo()
     elif(tk.getTokenCode() == TABRECOLCHETES):
+        #---verifica se é vetor
+        table.verificarVetor(idAnt, err)
+        #------------------------------
         tree.addChild(TokenTree(tk))
         handler.consumeToken()
         tree.addChild(nome_num(handler, err, table))

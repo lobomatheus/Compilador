@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 #tabela de símbolos
 
 class TypeTable:
@@ -14,10 +16,12 @@ class SymbolTable:
         self.atual = None
         self.buildMode = False
         self.paramMode = False
+        self.recordMode = False
         self.escopo=[]
         self.arrayCount = 0
         self.idEsquerda = None
         self.escopoEsquerda = None
+        self.confere = False
     
     def printTable(self):
         for s in self.table:
@@ -58,6 +62,7 @@ class SymbolTable:
     
     def startParam(self):
         self.func = self.atual.copy()
+        #print(self.atual)
         self.func['params'] = []
         self.paramMode = True
         self.addEscopo(self.atual['id'][0])
@@ -69,6 +74,7 @@ class SymbolTable:
         }
     
     def stopParam(self):
+        #print(self.func)
         self.atual = self.func.copy()
         self.func = []
         self.paramMode = False
@@ -148,7 +154,7 @@ class SymbolTable:
 
 
     #---------------------------provavelmente nao sera necessario (regra 1 cobre)
-    """  def verificarCampoRegistro(self, idReg, idCampo):
+    """ def verificarCampoRegistro(self, idReg, idCampo):
         regis = list(filter((lambda x: x[4] == idReg and x[0]==idCampo)))
         if(lem(regs) == 0):
             return True
@@ -166,9 +172,12 @@ class SymbolTable:
                 return self.tratarTiposDefinidos(s[2])
         func = list(filter((lambda x: x[0]==escopo), self.table))
         if(len(func) > 0):
-            for s in func[0][4]:
-                if(s[0] == id):
-                    return self.tratarTiposDefinidos(s[2])
+            if(func[0][1] == 'function' or func[0][1] == 'procedure'):
+                for s in func[0][4]:
+                    if(s[0] == id):
+                        return self.tratarTiposDefinidos(s[2])
+            else:
+                return self.tratarTiposDefinidos(func[0][0])
         return ''
     
     def tratarTiposDefinidos(self, tipo):
@@ -177,7 +186,6 @@ class SymbolTable:
             return self.tratarTiposDefinidos(tipos[0][2])
         else:
             return tipo
-
 
     def iniciarVerTipos(self, id):
         self.idEsquerda = id
@@ -202,4 +210,73 @@ class SymbolTable:
                             err.addErr(tk.getSymbol(), tk, tk.getLinha(), 10)
                     self.idEsquerda = None
                     self.escopoEsquerda = None
-                    
+
+
+    def verificarRegistro(self, tk, err):
+        id = tk.getSymbol()
+        escopoAtual = self.peekEscopo()
+        #print(escopoAtual)
+        #print(self.getRecords(escopoAtual))
+        reg = list(filter((lambda x: (x[3] == escopoAtual and x[0] in self.getElements('record', escopoAtual)) and x[0] == id), self.table))
+        if(len(reg) == 0):
+            reg = list(filter((lambda x: (x[3] == 'global' and x[0] in self.getElements('record', 'global')) and x[0] == id), self.table))
+            if(len(reg) == 0):
+                if(escopoAtual != 'global'):
+                    funcs = list(filter((lambda x: x[0]==escopoAtual and (x[1]=='function'or x[1]=='procedure')),self.table))
+                    if(len(funcs) > 0):
+                        params = funcs[0][4]
+                        for p in params:
+                            if(p[0] == id):
+                                reg.append(p)
+                #print(reg, tk.getLinha())
+                if(len(reg)==0):
+                    err.addErr(tk.getSymbol(), tk, tk.getLinha(), 7)
+        
+    def getElements(self, classe, escopo):
+        rec = list(filter((lambda x: (self.getTipo(x[0],escopo)==classe and x[3]==escopo)), self.table))
+        rec2 = []
+        for r in rec:
+            rec2.append(r[0])
+        return rec2
+
+    def verificarVetor(self, tk, err):
+        id = tk.getSymbol()
+        escopoAtual = self.peekEscopo()
+        reg = list(filter((lambda x: (x[3] == escopoAtual and x[0] in self.getElements('array', escopoAtual)) and x[0] == id), self.table))
+        if(len(reg) == 0):
+            reg = list(filter((lambda x: (x[3] == 'global' and x[0] in self.getElements('array', 'global')) and x[0] == id), self.table))
+            if(len(reg) == 0):
+                if(escopoAtual != 'global'):
+                    funcs = list(filter((lambda x: x[0]==escopoAtual and (x[1]=='function'or x[1]=='procedure')),self.table))
+                    if(len(funcs) > 0):
+                        params = funcs[0][4]
+                        for p in params:
+                            if(p[0] == id):
+                                reg.append(p)
+                if(len(reg)==0):
+                    err.addErr(tk.getSymbol(), tk, tk.getLinha(), 5)
+        
+
+    def setVerificacao(self, estado):
+        self.confere = estado
+
+    def setRecordMode(self, estado):
+        self.recordMode = estado
+
+    def verificarDeclaracao(self, tk, err):
+        escopoAtual = self.peekEscopo()
+        if (self.confere == True):
+            id = tk.getSymbol()
+            dec = list(filter((lambda x: (x[3]==escopoAtual and x[0]==id)), self.table))
+            if(len(dec)==0):
+                dec = list(filter((lambda x: (x[3]=='global') and x[0]==id), self.table))
+                if (len(dec) == 0):
+                    if(escopoAtual != 'global'):
+                        funcs = list(filter((lambda x: x[0]==escopoAtual and (x[1]=='function'or x[1]=='procedure')),self.table))
+                        if(len(funcs) > 0):
+                            params = funcs[0][4]
+                            for p in params:
+                                if(p[0] == id):
+                                    dec.append(p)
+                    if (len(dec) == 0):
+                        err.addErr(tk.getSymbol(), tk, tk.getLinha(), 3)
