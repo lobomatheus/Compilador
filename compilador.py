@@ -5,6 +5,7 @@ from seeker import Handler
 from errors import errors
 from sintatico import programa, TokenTree
 from symb import SymbolTable
+from inter import Instrucao, gerarCodigoIntermediario
 
 #Essa seria a main do programa. Nela, um handler é instanciado
 #e vai solicitando os tokens. Ao invés desse while, teria que ser
@@ -35,6 +36,7 @@ for t in tknList:
     t.exhibit()
 print(len(tknList))
 '''
-#tree.printTree(0)
-table.printTable()
-err.printError()
+tree.printTree(0)
+#table.printTable()
+codigo_intermediario = gerarCodigoIntermediario(tree) #aqui vai retornar um array de Instrucao
+err.printError() #Precisa fazer com que ele só gere o código se não tiver erro, mas isso pode ficar pro fim
