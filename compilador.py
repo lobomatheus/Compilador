@@ -38,5 +38,15 @@ print(len(tknList))
 '''
 tree.printTree(0)
 #table.printTable()
-codigo_intermediario = gerarCodigoIntermediario(tree) #aqui vai retornar um array de Instrucao
-err.printError() #Precisa fazer com que ele só gere o código se não tiver erro, mas isso pode ficar pro fim
+flag = err.printError() #Precisa fazer com que ele só gere o código se não tiver erro, mas isso pode ficar pro fim
+
+if(not flag):
+    codigo_intermediario = gerarCodigoIntermediario(tree) #aqui vai retornar um array de Instrucao
+
+    line=1
+    for inst in codigo_intermediario.conj:
+        if(inst.label != None):
+            print(str(inst.label) + ' '  + str(line) + ' | ' + str(inst.instrucao))
+        else:
+            print(str(line) + ' | ' + str(inst.instrucao))
+        line = line + 1

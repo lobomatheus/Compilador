@@ -32,7 +32,10 @@ class errors:
         self.err.append(t)
 
     def printError(self):
+        flag = False
         for e in self.err:
+            flag = True
             simb,token,linha,message = e
             print(message + str(simb) + " na linha " + str(linha))
         print("Compilação terminada")
+        return flag
