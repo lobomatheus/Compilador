@@ -813,7 +813,7 @@ def exp_mat2(handler, err, table):
     tree = TokenTree(Token(65, "TEXPMAT2", "", False, tk.getLinha()))
     if(tk.getTokenCode() == TOPERATOR):
         tree.addChild(TokenTree(tk))
-        hamdler.consumeToken()
+        handler.consumeToken()
         tree.addChild(exp_mat(handler, err, table))
     return tree
 

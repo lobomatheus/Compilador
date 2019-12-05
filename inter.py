@@ -6,6 +6,8 @@ from follow import *
 #Ainda não sei se é o melhor jeito, mas essa classe teria os 4 valores de uma instrução
 # de codigo intermediario, daí a gente ia adicionado de uma em uma instrução, sla
 
+totalLinhas = 0
+
 class Instrucao():
     def __init__(self, comando):
         self.instrucao = [comando]
@@ -23,6 +25,8 @@ class ConjInstrucao():
         self.qtdTemporarios = 0
 
     def addInstrucao(self, inst):
+        global totalLinhas
+        totalLinhas = totalLinhas + 1
         self.conj.append(inst)
 
     def addConjInstrucao(self, dummyInst):
@@ -82,7 +86,7 @@ def matchConstantes(tree, inst):
     # de constValor, ela possivelmente vai gerar varias instruções e varios registradores
     # temporarios. A cada instrução que vai atribuir um valor a um registrador temporario,
     # a gente teria que incrementar a quantidade de temporarios.
-    val = 'value' # substituir para pegar o valor do registrador temporario atual
+    val = getValor(command[2], inst) # substituir para pegar o valor do registrador temporario atual
 
     i = Instrucao('Mov')
     i.addEndereco(str(command[0].getRoot().getSymbol()))
@@ -98,7 +102,8 @@ def matchConstantes2(tree, inst):
     command = tree.children
     var = command[0].getRoot().getSymbol()
     # Aqui deverá chamar uma função para constvalor que irá gerar uma instrução do tipo Mov t1 [valor da exp mat]
-    val = 'value' # substituir para pegar o valor do registrador temporario atual
+    #print(command[1].children[0].getRoot().getSymbol())
+    val = getValor(command[1].children[1], inst) # substituir para pegar o valor do registrador temporario atual
     i = Instrucao('Mov')
     i.addEndereco(var)
     i.addEndereco(val)
@@ -120,7 +125,6 @@ def matchBloco(tree, inst, label='', bloco_normal=False):
         matchComandos(bloco.children[1], inst, label)
     else:
         matchComandos(bloco.children[0], inst, label)
-
 
 
 def matchRotinas(tree, inst):
@@ -154,17 +158,26 @@ def matchComandos(tree, inst, label=''):
     tk = tree.children[0].getRoot()
     # Um caso para atribuição (terá que verificar se o lado direito é função, array, etc)
     if(tk.getTokenCode() == TID):
-        val = 'value' # substituir para pegar o valor do registrador temporario atual
+        
+        if(tree.children[1].getRoot().getTokenCode() == TNOME2):
+            val = pegarExpMat(tree.children[3].children, inst)#'value' # substituir para pegar o valor do registrador temporario atual
+        else:
+            val = pegarExpMat(tree.children[2].children, inst)
         i = Instrucao("Mov")
         id = tree.children[0].getRoot().getSymbol()
         if(tree.children[1].getRoot().getTokenCode() == TNOME2):
-            i.addEndereco(id + getIdName(tree.children[1]))
+            i.addEndereco(id + getIdName(tree.children[1], inst))
         else:
             i.addEndereco(id)
-        i.addEndereco(val)
+        if(val == None):
+            i.addEndereco(inst.getTempo())
+        else:
+            i.addEndereco(val)
         if(label!=''): i.addLabel(label)
         inst.addInstrucao(i)
     # Um caso para while
+    if(tk.getTokenCode() == TWHILE):
+        tratarWhile(tree, inst)
     
     # Um caso para if (e verificar se existirá um else)
     if(tk.getTokenCode() == TIF):
@@ -172,7 +185,28 @@ def matchComandos(tree, inst, label=''):
 
     
     # Um caso para write
+    # Um caso para write
+    if(tk.getTokenCode() == TWRITE):
+        i = Instrucao("str")
+        #val = tree.children[1].getRoot().getSymbol()
+        var = getValor(tree.children[1], inst)
+        i.addEndereco(var)
+        if(label!=''): i.addLabel(label)
+        #i.addEndereco(val)
+        inst.addInstrucao(i)
+
     # Um caso para read
+    if(tk.getTokenCode() == TREAD):
+        i = Instrucao("lod")
+        nome = tree.children[1]
+        id = nome.children[0].getRoot().getSymbol()
+        if(nome.children[1].getRoot().getTokenCode() == TNOME2):
+            i.addEndereco(id + getIdName(nome.children[1], inst))
+        else:
+            i.addEndereco(id)
+        if(label!=''): i.addLabel(label)
+        inst.addInstrucao(i)
+
     tam = len(tree.children)
     if(tree.children[tam-1].getRoot().getTokenCode() == TCOMANDOS2):
         if(len(tree.children[tam-1].children) > 1):
@@ -183,6 +217,133 @@ def matchComandos(tree, inst, label=''):
     return
 
 #Criar funções também para tratar exp_mat, exp logica, 
+
+def getValor(tree, inst): #caso do const valor
+    command = tree.children
+    tk = tree.children[0].getRoot()
+
+    if (tk.getTokenCode() == TSTRING):
+        return tk.getSymbol()
+    else:
+        return pegarExpMat(command[0].children,inst)
+
+def pegarExpMat(tree, inst):
+    tk = tree[0].getRoot()
+
+    if(tk.getTokenCode() == TNUM):
+        t1 = tk.getSymbol()
+        if(len(tree) > 1):
+            op = tree[1].children[0].getRoot().getSymbol()
+            if(op == '+'):
+                i = Instrucao('Add')
+            elif(op =='-'):
+                i = Instrucao('Sub')
+            elif(op == '*'):
+                i = Instrucao('Mul')
+            elif(op == '/'):
+                i = Instrucao('Div')
+            
+
+            
+            val = pegarExpMat(tree[1].children[1].children, inst)
+            
+            res = inst.getTempo()
+
+            inst.incrementarTemporarios()
+            i.addEndereco(inst.getTempo())
+
+            
+            if(val == None):
+                i.addEndereco(res)
+            else:
+                i.addEndereco(val)
+            i.addEndereco(t1)
+            inst.addInstrucao(i)
+        else:
+            return t1
+
+    elif(tk.getTokenCode() == TABREPARENTESES):  
+        pegarExpMat(tree[0].children)
+    elif(tk.getTokenCode() == TNOMENUM):
+        id = tree[0].children[0].getRoot().getSymbol() # pega o id do nomenum
+        if(len(tree[0].children) > 1): #se nomenum tem nome3
+            command = tree[0].children[1].children # filhos de nome3
+        
+            if(command[0].getRoot().getTokenCode() == TABREPARENTESES): #se nome3 é abre parenteses
+                i = Instrucao('Call')
+                i.addEndereco(id)
+                inst.addInstrucao(i)
+                return 'Rtn'
+
+            else: #se nao é abre parenteses, é nome2
+                id = id + getIdName(command[0], inst) #adiciona o resto do nome ao valor    
+        if(len(tree) > 1):
+            op = tree[1].children[0].getRoot().getSymbol() #pega o operador
+            if(op == '+'):
+                i = Instrucao('Add')
+            elif(op =='-'):
+                i = Instrucao('Sub')
+            elif(op == '*'):
+                i = Instrucao('Mul')
+            elif(op == '/'):
+                i = Instrucao('Div')
+            
+            
+            val = pegarExpMat(tree[1].children[1].children, inst)
+            
+            res = inst.getTempo()
+
+            inst.incrementarTemporarios()
+            i.addEndereco(inst.getTempo())
+            if(val == None):
+                i.addEndereco(res)
+            else:
+                i.addEndereco(val)
+            i.addEndereco(id)
+            inst.addInstrucao(i)
+        else:
+            #val = tree[0].children[0].getRoot().getSymbol()
+            i = Instrucao('Mov')
+            inst.incrementarTemporarios()
+            i.addEndereco(inst.getTempo())
+            i.addEndereco(id)
+            inst.addInstrucao(i)
+
+def tratarWhile(tree, inst):
+
+    command = tree.children
+
+    linhaRetorno = totalLinhas + 1
+
+    condicao = tratarExpLogica(command[1], inst)
+
+    jmp = Instrucao('Jnz')
+    jmp.addEndereco(inst.getTempo())
+    
+    dummyInst = ConjInstrucao()
+    dummyInst.setTemp(inst)
+
+    if(not condicao):
+        #jmp.addEndereco(len(inst.conj) + len(dummyInst.conj) + 2)
+        matchBloco(command[2], dummyInst, bloco_normal=True)
+        jmp.addEndereco(totalLinhas + 2)
+        inst.addInstrucao(jmp)
+    else:
+        jmp.addEndereco(totalLinhas + 3)
+        matchBloco(command[2], dummyInst, bloco_normal=True)
+        jmp2 = Instrucao('Jmp')
+        #jmp2.addEndereco(len(inst.conj) + len(dummyInst.conj) + 3)
+        jmp2.addEndereco(totalLinhas + 4)
+        inst.addInstrucao(jmp)
+        inst.addInstrucao(jmp2)
+
+    inst.addConjInstrucao(dummyInst)
+    inst.setTemp(dummyInst)    
+
+    jmp3 = Instrucao('Jmp')
+    jmp3.addEndereco(str(linhaRetorno))
+    inst.addInstrucao(jmp3)
+
 
 def tratarIfElse(tree, inst):
     
@@ -197,7 +358,7 @@ def tratarIfElse(tree, inst):
         # o jump será para quando acabar a instrução. Logo, tem que adicionar a linha para onde vai pular
         jmp = Instrucao('Jnz')
         jmp.addEndereco(inst.getTempo())
-        jmp.addEndereco(str(len(inst.conj) + 3))
+        jmp.addEndereco(totalLinhas + 4)
         inst.addInstrucao(jmp)
 
         if(len(command) > 4):
@@ -215,7 +376,8 @@ def tratarIfElse(tree, inst):
         dummyInst.setTemp(inst)
         matchBloco(command[3], dummyInst, bloco_normal=True)
 
-        jmp2.addEndereco(str(len(inst.conj) + len(dummyInst.conj) + 2))
+        #jmp2.addEndereco(str(len(inst.conj) + len(dummyInst.conj) + 2))
+        jmp2.addEndereco(totalLinhas + 2)
         inst.addInstrucao(jmp2)
         #print('jmp2')
         
@@ -233,7 +395,8 @@ def tratarIfElse(tree, inst):
         dummyInst.setTemp(inst)
         matchBloco(command[3], dummyInst, bloco_normal=True)
 
-        jmp.addEndereco(str(len(inst.conj) + len(dummyInst.conj) + 1))
+        #jmp.addEndereco(str(len(inst.conj) + len(dummyInst.conj) + 1))
+        jmp.addEndereco(totalLinhas + 3)
         inst.addInstrucao(jmp)
         
         inst.setTemp(dummyInst)
@@ -241,17 +404,20 @@ def tratarIfElse(tree, inst):
 
         if(len(command) > 4):
             if(command[4].getRoot().getTokenCode() == TELSE):
+                
+
                 elseCommand = command[4].children
                 elseInst = ConjInstrucao()
                 elseInst.setTemp(inst)
                 matchBloco(elseCommand[1], elseInst, bloco_normal=True)
+                
+                jmp2 = Instrucao('Jmp')
+                #jmp2.addEndereco(len(inst.conj) + len(elseInst.conj) + 2)
+                jmp2.addEndereco(totalLinhas + 2)
+                inst.addInstrucao(jmp2)
+
                 inst.addConjInstrucao(elseInst)
                 inst.setTemp(elseInst)
-
-                jmp2 = Instrucao('Jmp')
-                jmp2.addEndereco(len(inst.conj) + len(elseInst.conj) + 2)
-                inst.addInstrucao(jmp2)
-                inst.addConjInstrucao(elseInst)
 
 
 def tratarExpLogica(tree, inst):
@@ -276,45 +442,53 @@ def tratarExpLogica(tree, inst):
 
     command = tree.children
 
-    val1 = 'value1' #aqui pegaremos o registrador temporario
-    
+    val1 = pegarExpMat(command[0].children, inst) #aqui pegaremos o registrador temporario
+    if(val1 == None):
+        temp1 = inst.getTempo()
+    else:
+        temp1 = val1
+
     if(len(command) > 1):
         val2 = tratarExpLogica(command[1].children[1] ,inst)
+        if(val2 == None):
+            temp2 = inst.getTempo()
+        else:
+            temp2 = val2
 
         opLogico = command[1].children[0]
         if(opLogico.getRoot().getSymbol() == '='):
             i = Instrucao('Eql')
-            tempAnterior = inst.getTempo()
             inst.incrementarTemporarios()
             i.addEndereco(inst.getTempo())
-            i.addEndereco(tempAnterior)
+            i.addEndereco(temp1)
+            i.addEndereco(temp2)
             inst.addInstrucao(i)
             return 1
 
         elif(opLogico.getRoot().getSymbol() == '!'):
             i = Instrucao('Eql')
-            tempAnterior = inst.getTempo()
             inst.incrementarTemporarios()
             i.addEndereco(inst.getTempo())
-            i.addEndereco(tempAnterior)
+            i.addEndereco(temp1)
+            i.addEndereco(temp2)
             inst.addInstrucao(i)
             return 0
 
         elif(opLogico.getRoot().getSymbol() == '<'):
             i = Instrucao('Les')
-            tempAnterior = inst.getTempo()
             inst.incrementarTemporarios()
             i.addEndereco(inst.getTempo())
-            i.addEndereco(tempAnterior)
+            i.addEndereco(temp1)
+            i.addEndereco(temp2)
             inst.addInstrucao(i)
             return 1
         
         elif(opLogico.getRoot().getSymbol() == '>'):
             i = Instrucao('Les')
-            tempAnterior = inst.getTempo()
             inst.incrementarTemporarios()
             i.addEndereco(inst.getTempo())
-            i.addEndereco(tempAnterior)
+            i.addEndereco(temp1)
+            i.addEndereco(temp2)
             inst.addInstrucao(i)
             return 0
 
@@ -322,16 +496,48 @@ def tratarExpLogica(tree, inst):
         return val1
 
 
-def getIdName(tree):
+def tratarNomeNum(tree, inst):
+    tk = tree.children[0].getRoot().getTokenCode()
+    id = tree.children[0].getRoot().getSymbol() # pega o id do nomenum
+    if(tk == TNUM):
+        return id
+    if(len(tree.children) > 1): #se nomenum tem nome3
+        command = tree.children[1].children # filhos de nome3
+    
+        if(command[0].getRoot().getTokenCode() == TABREPARENTESES): #se nome3 é abre parenteses
+            i = Instrucao('Call')
+            i.addEndereco(id)
+            i2 = Instrucao('Mov')
+            inst.incrementarTemporarios()
+            i2.addEndereco(inst.getTempo())
+            i2.addEndereco('Rtn')
+            inst.addInstrucao(i)
+            inst.addInstrucao(i2)
+        else: #se nao é abre parenteses, é nome2
+            id = id + getIdName(command[0], inst) #adiciona o resto do nome ao valor    
+    
+    val = tree.children[0].getRoot().getSymbol()
+    i = Instrucao('Mov')
+    inst.incrementarTemporarios()
+    i.addEndereco(inst.getTempo())
+    i.addEndereco(val)
+    inst.addInstrucao(i)
+
+def getIdName(tree, inst):
     
     command = tree.children
     if(tree.getRoot().getTokenCode() == TID): #ID
         return tree.children[0].getRoot().getSymbol()
 
     if(command[0].getRoot().getTokenCode() == TPONTO): #Record
-        return '.' + getIdName(command[1])
+        nome = tree.children[1]
+        id = nome.children[0].getRoot().getSymbol()
+        if(len(nome.children) > 1 and nome.children[1].getRoot().getTokenCode() == TNOME2):
+            return '.' + id + getIdName(nome.children[1], inst)
+        else:
+            return '.' + id 
 
     elif(command[0].getRoot().getTokenCode() == TABRECOLCHETES): #Vetor
-        val = 'value' #Pega o valor do nome_num aqui
+        val = tratarNomeNum(command[1], inst)#Pega o valor do nome_num aqui
+        if(val == None): val = inst.getTempo()
         return '[' + str(val) + ']'
-
